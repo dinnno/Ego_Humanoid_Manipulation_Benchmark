@@ -18,6 +18,7 @@ from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sensors.camera.camera import Camera
 from omni.isaac.lab.sensors.camera.camera_cfg import CameraCfg
 from omni.isaac.lab.sim import SimulationCfg
+from omni.isaac.lab.sim.simulation_cfg import PhysxCfg
 from omni.isaac.lab.sim.spawners.from_files.from_files import spawn_ground_plane
 from omni.isaac.lab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg
 from omni.isaac.lab.terrains import TerrainImporterCfg

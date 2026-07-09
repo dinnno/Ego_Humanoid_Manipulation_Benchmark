@@ -48,10 +48,14 @@ class FlipMugEnvCfg(BaseEnvCfg):
 class FlipMugEnv(BaseEnv):
     cfg: FlipMugEnvCfg 
 
+    SUCCESS_Z_THRESHOLD = 0.9   # cos(~26°) — near-upright required
+    SUCCESS_HOLD_FRAMES = 10    # must hold for 10 consecutive frames
+
     def __init__(self, cfg: FlipMugEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         self.success = torch.zeros([self.num_envs], dtype=torch.bool, device=self.device)
         self.reach_mug_success = torch.zeros([self.num_envs], dtype=torch.bool, device=self.device)
+        self._success_hold_counter = torch.zeros([self.num_envs], dtype=torch.int32, device=self.device)
             
     def _setup_scene(self):
         self._update_cfg_mesh(self.cfg.mug, self.cfg.mug_mesh_idx)
@@ -76,18 +80,22 @@ class FlipMugEnv(BaseEnv):
         mug_root_state[env_ids, 0:3] += self.scene.env_origins[env_ids, 0:3]
         self.mug.write_root_state_to_sim(mug_root_state, env_ids=env_ids)
         self.reach_mug_success[env_ids] = 0
-        
+        self._success_hold_counter[env_ids] = 0
+
     def _get_subtask(self):
         left_hand_mug_dist = torch.norm(self.left_finger_pos_mean - self.mug.data.root_state_w[:, 0:3], dim=-1)
         self.reach_mug_success[torch.where(left_hand_mug_dist < 0.12)] = 1
         
     def _get_success(self):
         self.success[:] = 0
-        for env_id in range(self.num_envs):
-            # check if mug is flipped upwards up
-            z_unit_mug_frame = math_util.quat_apply(torch.tensor(self.mug.data.root_quat_w, device=self.device), torch.tensor((0, 0, 1), device=self.device, dtype=torch.float32))
-            mug_flipped = True if z_unit_mug_frame[2] > 0.5 else False
-            self.success[env_id] = 1 if mug_flipped else 0
+        z_unit = math_util.quat_apply(
+            self.mug.data.root_quat_w,
+            torch.tensor((0, 0, 1), device=self.device, dtype=torch.float32).expand(self.num_envs, -1),
+        )  # [num_envs, 3]
+        flipped_now = z_unit[:, 2] > self.SUCCESS_Z_THRESHOLD  # [num_envs]
+        self._success_hold_counter[flipped_now] += 1
+        self._success_hold_counter[~flipped_now] = 0
+        self.success = self._success_hold_counter >= self.SUCCESS_HOLD_FRAMES
 
     def _get_observations(self) -> dict:
         obs = super()._get_observations()

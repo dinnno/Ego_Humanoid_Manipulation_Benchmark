@@ -102,8 +102,7 @@ class UnloadCansEnv(BaseEnv):
                     curr_can_unloaded = False
                 if curr_can_unloaded:
                     self.unload_success[env_id] += 1
-            # self.success[env_id] = 1 if all_can_unloaded and all_can_upwards else 0
-            self.success[env_id] = 1 if all_can_unloaded else 0
+            self.success[env_id] = 1 if all_can_unloaded and all_can_upwards else 0
     
     def _get_subtask(self):
         self.reach_fanta1_success[torch.where(torch.norm(self.right_finger_pos_mean - self.can_fanta_1.data.root_state_w[:, 0:3], dim=-1) < 0.12)] = 1

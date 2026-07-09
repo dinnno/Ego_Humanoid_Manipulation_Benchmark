@@ -22,10 +22,13 @@ class OpenLaptopEnvCfg(BaseEnvCfg):
 class OpenLaptopEnv(BaseEnv):
     cfg: OpenLaptopEnvCfg 
 
+    SUCCESS_HOLD_FRAMES = 10  # must hold for 10 consecutive frames
+
     def __init__(self, cfg: OpenLaptopEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         self.success = torch.zeros([self.num_envs], device=self.device)
         self.move_lid_success = torch.zeros([self.num_envs], device=self.device)
+        self._success_hold_counter = torch.zeros([self.num_envs], dtype=torch.int32, device=self.device)
             
     def _setup_scene(self):
         self.laptop = Articulation(self.cfg.laptop)
@@ -55,6 +58,8 @@ class OpenLaptopEnv(BaseEnv):
         joint_vel = torch.zeros_like(joint_pos)
         self.laptop.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
         self.move_lid_success[env_ids] = 0
+        self.success[env_ids] = 0
+        self._success_hold_counter[env_ids] = 0
         
     def _get_subtask(self):
         laptop_upper = self.laptop.data.joint_limits[:, 0, 1]
@@ -62,7 +67,11 @@ class OpenLaptopEnv(BaseEnv):
         
     def _get_success(self):
         laptop_upper = self.laptop.data.joint_limits[:, 0, 1]
-        self.success[torch.where(self.laptop.data.joint_pos[:, 0] > laptop_upper * 0.7)] = 1
+        opened_now = self.laptop.data.joint_pos[:, 0] > laptop_upper * 0.7  # [num_envs]
+        self._success_hold_counter[opened_now] += 1
+        self._success_hold_counter[~opened_now] = 0
+        self.success[:] = 0
+        self.success[self._success_hold_counter >= self.SUCCESS_HOLD_FRAMES] = 1
 
     def _get_observations(self) -> dict:
         obs = super()._get_observations()
