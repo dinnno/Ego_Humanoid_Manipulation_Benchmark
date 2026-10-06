@@ -1,14 +1,14 @@
 from __future__ import annotations
 from collections.abc import Sequence
 
-from humanoid.tasks.base_env.base_env import BaseEnv, BaseEnvCfg
+from humanoid.tasks.base_env.base_env import BENCHMARK_RENDER_CFG, BaseEnv, BaseEnvCfg
 from humanoid.tasks.data.mug import MUG_CFG
-from omni.isaac.lab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg, RigidObject
-from omni.isaac.lab.sim import SimulationCfg, PhysxCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg, RigidObject
+from isaaclab.sim import SimulationCfg, PhysxCfg
+from isaaclab.utils import configclass
 
-import omni.isaac.lab.sim as sim_utils
-import omni.isaac.lab.utils.math as math_util
+import isaaclab.sim as sim_utils
+import isaaclab.utils.math as math_util
 import torch
 
 BALL_CFG: RigidObjectCfg = RigidObjectCfg(
@@ -35,8 +35,10 @@ class FlipMugEnvCfg(BaseEnvCfg):
         dt=1 / 240, 
         render_interval=8,
         physx=PhysxCfg(
-            enable_ccd=True
-        )
+            enable_ccd=True,
+            enable_stabilization=True,
+        ),
+        render=BENCHMARK_RENDER_CFG,
     )
     # mug that balls are poured into
     mug: RigidObjectCfg = MUG_CFG.replace(prim_path="/World/envs/env_.*/mug")  # type: ignore

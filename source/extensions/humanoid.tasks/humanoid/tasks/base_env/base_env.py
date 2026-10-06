@@ -7,24 +7,37 @@ from humanoid.tasks.data.h1 import (H1_INSPIRE_CFG, H1_INSPIRE_LEFT_ARM_CFG, H1_
                                     H1_INSPIRE_RIGHT_ARM_CFG, H1_INSPIRE_RIGHT_HAND_CFG)
 from humanoid.tasks.data.scene import ROOM_CFG
 from humanoid.tasks.data.table import TABLE_CFG
-from omni.isaac.lab.sensors.contact_sensor.contact_sensor import ContactSensor
-from omni.isaac.lab.sensors.contact_sensor.contact_sensor_cfg import ContactSensorCfg
-from omni.isaac.lab.assets.articulation.articulation import Articulation
-from omni.isaac.lab.assets.articulation.articulation_cfg import ArticulationCfg
-from omni.isaac.lab.assets.asset_base_cfg import AssetBaseCfg
-from omni.isaac.lab.envs import DirectRLEnvCfg
-from omni.isaac.lab.envs.direct_rl_env import DirectRLEnv
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors.camera.camera import Camera
-from omni.isaac.lab.sensors.camera.camera_cfg import CameraCfg
-from omni.isaac.lab.sim import SimulationCfg
-from omni.isaac.lab.sim.simulation_cfg import PhysxCfg
-from omni.isaac.lab.sim.spawners.from_files.from_files import spawn_ground_plane
-from omni.isaac.lab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg
-from omni.isaac.lab.terrains import TerrainImporterCfg
-from omni.isaac.lab.utils import configclass
-import omni.isaac.lab.sim as sim_utils
-import omni.isaac.lab.utils.math as math_util
+from isaaclab.sensors.contact_sensor.contact_sensor import ContactSensor
+from isaaclab.sensors.contact_sensor.contact_sensor_cfg import ContactSensorCfg
+from isaaclab.assets.articulation.articulation import Articulation
+from isaaclab.assets.articulation.articulation_cfg import ArticulationCfg
+from isaaclab.assets.asset_base_cfg import AssetBaseCfg
+from isaaclab.envs import DirectRLEnvCfg
+from isaaclab.envs.direct_rl_env import DirectRLEnv
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors.camera.camera import Camera
+from isaaclab.sensors.camera.camera_cfg import CameraCfg
+from isaaclab.sim import SimulationCfg
+from isaaclab.sim.simulation_cfg import PhysxCfg, RenderCfg
+from isaaclab.sim.spawners.from_files.from_files import spawn_ground_plane
+from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+import isaaclab.sim as sim_utils
+import isaaclab.utils.math as math_util
+
+# Isaac Lab 2.x port. 2.x applies a rendering preset ("balanced") over the .kit rtx values when the
+# SimulationContext starts, so the render deltas this benchmark made in source/apps/*.kit (vs Isaac Lab 1.2)
+# are re-applied here instead. PhysX: 1.2 defaulted enable_stabilization=True, 2.x defaults it to False,
+# so every SimulationCfg in this package sets it explicitly.
+BENCHMARK_RENDER_CFG = RenderCfg(
+    rendering_mode="balanced",
+    enable_translucency=True,
+    enable_reflections=True,
+    enable_ambient_occlusion=True,
+    dlss_mode=1,
+    carb_settings={"rtx.raytracing.cached.enabled": True, "rtx.translucency.worldEps": 0.005},
+)
 
 @configclass
 class BaseEnvCfg(DirectRLEnvCfg):
@@ -32,7 +45,8 @@ class BaseEnvCfg(DirectRLEnvCfg):
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 120,
         render_interval=4,
-        physx=PhysxCfg(enable_ccd=True) # Enable global CCD, you also need to enable it per-object or enable the robot CCD.
+        physx=PhysxCfg(enable_ccd=True, enable_stabilization=True), # Enable global CCD, you also need to enable it per-object or enable the robot CCD.
+        render=BENCHMARK_RENDER_CFG,
     )
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",

@@ -4,12 +4,12 @@ from collections.abc import Sequence
 from humanoid.tasks.base_env.base_env import BaseEnv, BaseEnvCfg
 from humanoid.tasks.data.bowl import BOWL_CFG
 from humanoid.tasks.data.glassware import GLASSWARE_CFG
-from omni.isaac.lab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg, RigidObject
-from omni.isaac.lab.sim import SimulationCfg, PhysxCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg, RigidObject
+from isaaclab.sim import SimulationCfg, PhysxCfg
+from isaaclab.utils import configclass
 
-import omni.isaac.lab.utils.math as math_util 
-import omni.isaac.lab.sim as sim_utils
+import isaaclab.utils.math as math_util 
+import isaaclab.sim as sim_utils
 import torch
 
 BALL_CFG: RigidObjectCfg = RigidObjectCfg(

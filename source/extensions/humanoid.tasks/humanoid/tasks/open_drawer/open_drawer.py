@@ -1,19 +1,19 @@
 from __future__ import annotations
 from collections.abc import Sequence
 
-from humanoid.tasks.base_env.base_env import BaseEnv, BaseEnvCfg
+from humanoid.tasks.base_env.base_env import BENCHMARK_RENDER_CFG, BaseEnv, BaseEnvCfg
 from humanoid.tasks.data.drawer.drawer import DRAWER_CFG, DRAWER_JOINT_CFG
 from humanoid.tasks.data.cube import CUBE_CFG
-from omni.isaac.lab.assets.articulation.articulation import Articulation
-from omni.isaac.lab.assets.rigid_object.rigid_object import RigidObject
-from omni.isaac.lab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
-from omni.isaac.lab.sim.simulation_cfg import SimulationCfg
-from omni.isaac.lab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
+from isaaclab.assets.articulation.articulation import Articulation
+from isaaclab.assets.rigid_object.rigid_object import RigidObject
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
+from isaaclab.sim.simulation_cfg import SimulationCfg
+from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 import torch
-import omni.isaac.lab.sim as sim_utils
+import isaaclab.sim as sim_utils
 
 @configclass
 class OpenDrawerEnvCfg(BaseEnvCfg):
@@ -22,7 +22,9 @@ class OpenDrawerEnvCfg(BaseEnvCfg):
         dt=1 / 240,
         render_interval=8,
         physx=sim_utils.PhysxCfg(
-        )
+            enable_stabilization=True,
+        ),
+        render=BENCHMARK_RENDER_CFG,
     )
     # drawer
     drawer = DRAWER_CFG.replace(prim_path="/World/envs/env_.*/Drawer")  # type: ignore
@@ -65,8 +67,8 @@ class OpenDrawerEnv(BaseEnv):
     def _get_joints_data(self) -> None:
         self.is_drawer_full_open[:] = 0
         
-        drawer_bottom_upper = self.drawer.data.joint_limits[:, self.drawer_bottom_idx, 1]
-        drawer_bottom_lower = self.drawer.data.joint_limits[:, self.drawer_bottom_idx, 0]
+        drawer_bottom_upper = self.drawer.data.joint_pos_limits[:, self.drawer_bottom_idx, 1]
+        drawer_bottom_lower = self.drawer.data.joint_pos_limits[:, self.drawer_bottom_idx, 0]
         drawer_full_open_limit = drawer_bottom_lower + 0.1 * (drawer_bottom_upper - drawer_bottom_lower)
         self.is_drawer_full_open[torch.where(self.drawer.data.joint_pos[:, self.drawer_bottom_idx] < drawer_full_open_limit)] = 1
         
@@ -74,8 +76,8 @@ class OpenDrawerEnv(BaseEnv):
         drawer_handle_pos_w = self.drawer.data.root_state_w[:, 0:3] + self.drawer_handle_offset
         hand_handle_dist = torch.norm(self.left_finger_pos_mean - drawer_handle_pos_w, dim=-1)
         self.reach_success[torch.where(hand_handle_dist < 0.12)] = 1
-        drawer_bottom_upper = self.drawer.data.joint_limits[:, self.drawer_bottom_idx, 1]
-        drawer_bottom_lower = self.drawer.data.joint_limits[:, self.drawer_bottom_idx, 0]
+        drawer_bottom_upper = self.drawer.data.joint_pos_limits[:, self.drawer_bottom_idx, 1]
+        drawer_bottom_lower = self.drawer.data.joint_pos_limits[:, self.drawer_bottom_idx, 0]
         drawer_non_close_limit = drawer_bottom_upper - 0.1 * (drawer_bottom_upper - drawer_bottom_lower)
         self.move_door_success[torch.where(self.drawer.data.joint_pos[:, self.drawer_bottom_idx] < drawer_non_close_limit)] = 1
         
@@ -83,8 +85,8 @@ class OpenDrawerEnv(BaseEnv):
         super()._reset_idx(env_ids)
         joint_pos = self.drawer.data.default_joint_pos[env_ids]
         bottom_joint_bound = 1 if self.cfg.drawer_init_state == "close" else 0
-        joint_pos[:, self.drawer_top_idx] = self.drawer.data.joint_limits[env_ids, self.drawer_top_idx, 1].squeeze()
-        joint_pos[:, self.drawer_bottom_idx] = self.drawer.data.joint_limits[env_ids, self.drawer_bottom_idx, bottom_joint_bound].squeeze()
+        joint_pos[:, self.drawer_top_idx] = self.drawer.data.joint_pos_limits[env_ids, self.drawer_top_idx, 1].squeeze()
+        joint_pos[:, self.drawer_bottom_idx] = self.drawer.data.joint_pos_limits[env_ids, self.drawer_bottom_idx, bottom_joint_bound].squeeze()
         joint_pos = torch.clamp(joint_pos, self.drawer.data.soft_joint_pos_limits[0, :, 0], self.drawer.data.soft_joint_pos_limits[0, :, 1])
         joint_vel = torch.zeros_like(joint_pos)
         self.drawer.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)

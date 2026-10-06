@@ -4,10 +4,10 @@ from collections.abc import Sequence
 from humanoid.tasks.base_env.base_env import BaseEnv, BaseEnvCfg
 from humanoid.tasks.data.can import CAN_SPRITE_CFG, CAN_FANTA_CFG
 from humanoid.tasks.data.container import CONTAINER_PLASTIC_CFG
-from omni.isaac.lab.assets.asset_base_cfg import AssetBaseCfg
-from omni.isaac.lab.assets.rigid_object.rigid_object import RigidObject
-from omni.isaac.lab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.assets.asset_base_cfg import AssetBaseCfg
+from isaaclab.assets.rigid_object.rigid_object import RigidObject
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
+from isaaclab.utils import configclass
 
 import torch
 

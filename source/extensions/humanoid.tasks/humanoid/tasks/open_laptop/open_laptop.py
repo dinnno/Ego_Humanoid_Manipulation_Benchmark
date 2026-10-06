@@ -3,13 +3,13 @@ from collections.abc import Sequence
 
 from humanoid.tasks.base_env.base_env import BaseEnv, BaseEnvCfg
 from humanoid.tasks.data.laptop import LAPTOP_CFG
-from omni.isaac.lab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg, RigidObject
-from omni.isaac.lab.assets.articulation.articulation_cfg import ArticulationCfg, Articulation
-from omni.isaac.lab.sim import SimulationCfg, PhysxCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg, RigidObject
+from isaaclab.assets.articulation.articulation_cfg import ArticulationCfg, Articulation
+from isaaclab.sim import SimulationCfg, PhysxCfg
+from isaaclab.utils import configclass
 
-import omni.isaac.lab.utils.math as math_util 
-import omni.isaac.lab.sim as sim_utils
+import isaaclab.utils.math as math_util 
+import isaaclab.sim as sim_utils
 import torch
 
 @configclass
@@ -62,11 +62,11 @@ class OpenLaptopEnv(BaseEnv):
         self._success_hold_counter[env_ids] = 0
         
     def _get_subtask(self):
-        laptop_upper = self.laptop.data.joint_limits[:, 0, 1]
+        laptop_upper = self.laptop.data.joint_pos_limits[:, 0, 1]
         self.move_lid_success[torch.where(self.laptop.data.joint_pos[:, 0] > laptop_upper * 0.15)] = 1
         
     def _get_success(self):
-        laptop_upper = self.laptop.data.joint_limits[:, 0, 1]
+        laptop_upper = self.laptop.data.joint_pos_limits[:, 0, 1]
         opened_now = self.laptop.data.joint_pos[:, 0] > laptop_upper * 0.7  # [num_envs]
         self._success_hold_counter[opened_now] += 1
         self._success_hold_counter[~opened_now] = 0

@@ -2,7 +2,7 @@
 """Script is derived from IsaacLab random agent example."""
 
 import argparse
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Random agent for Ego_Humanoid_Manipulation_Benchmark environments.")
 parser.add_argument(
@@ -18,9 +18,9 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import torch
 
-import omni.isaac.lab_tasks  # noqa: F401
+import isaaclab_tasks  # noqa: F401
 import humanoid.tasks
-from omni.isaac.lab_tasks.utils import parse_env_cfg
+from isaaclab_tasks.utils import parse_env_cfg
 
 
 def main():

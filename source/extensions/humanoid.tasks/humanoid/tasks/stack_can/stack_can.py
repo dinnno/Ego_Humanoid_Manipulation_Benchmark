@@ -4,14 +4,14 @@ from collections.abc import Sequence
 from humanoid.tasks.base_env.base_env import BaseEnv, BaseEnvCfg
 from humanoid.tasks.data.can import CAN_FANTA_CFG
 from humanoid.tasks.data.plate import PLATE_CFG
-from omni.isaac.lab.assets.rigid_object.rigid_object import RigidObject
-from omni.isaac.lab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
-from omni.isaac.lab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
+from isaaclab.assets.rigid_object.rigid_object import RigidObject
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
+from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 import torch
-import omni.isaac.lab.sim as sim_utils
+import isaaclab.sim as sim_utils
 
 @configclass
 class StackCanEnvCfg(BaseEnvCfg):

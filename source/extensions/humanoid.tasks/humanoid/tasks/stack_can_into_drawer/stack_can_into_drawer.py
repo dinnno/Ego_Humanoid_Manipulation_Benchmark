@@ -1,17 +1,17 @@
 from __future__ import annotations
 from collections.abc import Sequence
 
-from humanoid.tasks.base_env.base_env import BaseEnv, BaseEnvCfg
+from humanoid.tasks.base_env.base_env import BENCHMARK_RENDER_CFG, BaseEnv, BaseEnvCfg
 from humanoid.tasks.data.drawer.drawer import DRAWER_CFG, DRAWER_JOINT_CFG
 from humanoid.tasks.data.can import CAN_FANTA_CFG
 from humanoid.tasks.data.h1.h1_inspire import H1_INSPIRE_CFG
 from humanoid.tasks.data.plate import PLATE_CFG
-from omni.isaac.lab.assets.articulation.articulation import Articulation
-from omni.isaac.lab.assets.articulation.articulation_cfg import ArticulationCfg
-from omni.isaac.lab.assets.rigid_object.rigid_object import RigidObject
-from omni.isaac.lab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
-from omni.isaac.lab.sim.simulation_cfg import SimulationCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.assets.articulation.articulation import Articulation
+from isaaclab.assets.articulation.articulation_cfg import ArticulationCfg
+from isaaclab.assets.rigid_object.rigid_object import RigidObject
+from isaaclab.assets.rigid_object.rigid_object_cfg import RigidObjectCfg
+from isaaclab.sim.simulation_cfg import PhysxCfg, SimulationCfg
+from isaaclab.utils import configclass
 
 import torch
 
@@ -21,6 +21,8 @@ class StackCanIntoDrawerEnvCfg(BaseEnvCfg):
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 240,
         render_interval=8,
+        physx=PhysxCfg(enable_stabilization=True),
+        render=BENCHMARK_RENDER_CFG,
     )
     can: RigidObjectCfg = CAN_FANTA_CFG.replace(prim_path="/World/envs/env_.*/Can")  # type: ignore
     can.init_state = RigidObjectCfg.InitialStateCfg(pos=(0.38, 0.0, 1.02), rot=(1, 0, 0, 0))
@@ -37,7 +39,7 @@ class StackCanIntoDrawerEnvCfg(BaseEnvCfg):
     drawer_joint_cfg = DRAWER_JOINT_CFG
     # need to override robot init joint state to avoid collision with drawer door
     robot: ArticulationCfg = H1_INSPIRE_CFG.replace(prim_path="/World/envs/env_.*/Robot") # type: ignore
-    robot.init_state.joint_pos[".*_shoulder_yaw_joint"] = 1.5
+    robot.init_state.joint_pos[".*_shoulder_yaw_joint"] = 1.299  # was 1.5: outside the USD limit +-74.48 deg (+-1.3 rad) -> _validate_cfg ValueError
     # fine tune robot initial joint pos so that it doesnt not collide with drawer door
     decimation = 8
 
@@ -78,7 +80,7 @@ class StackCanIntoDrawerEnv(BaseEnv):
     
     def _get_joints_data(self) -> None:
         self.is_drawer_close[:] = 0
-        drawer_bottom_upper = self.drawer.data.joint_limits[:, self.drawer_bottom_idx, 1]
+        drawer_bottom_upper = self.drawer.data.joint_pos_limits[:, self.drawer_bottom_idx, 1]
         self.is_drawer_close[torch.where(self.drawer.data.joint_pos[:, self.drawer_bottom_idx] > drawer_bottom_upper * 0.9)] = 1
 
     def _reset_idx(self, env_ids: Sequence[int] | None):
@@ -86,8 +88,8 @@ class StackCanIntoDrawerEnv(BaseEnv):
         # reset drawer joints
         joint_pos = self.drawer.data.default_joint_pos[env_ids]
         bottom_joint_bound = 1 if self.cfg.drawer_init_state == "close" else 0
-        joint_pos[:, self.drawer_top_idx] = self.drawer.data.joint_limits[env_ids, self.drawer_top_idx, 1].squeeze()
-        joint_pos[:, self.drawer_bottom_idx] = self.drawer.data.joint_limits[env_ids, self.drawer_bottom_idx, bottom_joint_bound].squeeze()
+        joint_pos[:, self.drawer_top_idx] = self.drawer.data.joint_pos_limits[env_ids, self.drawer_top_idx, 1].squeeze()
+        joint_pos[:, self.drawer_bottom_idx] = self.drawer.data.joint_pos_limits[env_ids, self.drawer_bottom_idx, bottom_joint_bound].squeeze()
         joint_pos = torch.clamp(joint_pos, self.drawer.data.soft_joint_pos_limits[0, :, 0], self.drawer.data.soft_joint_pos_limits[0, :, 1])
         joint_vel = torch.zeros_like(joint_pos)
         self.drawer.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
@@ -123,8 +125,8 @@ class StackCanIntoDrawerEnv(BaseEnv):
         self.reach_drawer_success[torch.where(left_hand_handle_dist < 0.12)] = 1
         right_hand_can_dist = torch.norm(self.right_finger_pos_mean - self.can.data.root_state_w[:, 0:3], dim=-1)
         self.reach_can_success[torch.where(right_hand_can_dist < 0.12)] = 1
-        drawer_bottom_upper = self.drawer.data.joint_limits[:, self.drawer_bottom_idx, 1]
-        drawer_bottom_lower = self.drawer.data.joint_limits[:, self.drawer_bottom_idx, 0]
+        drawer_bottom_upper = self.drawer.data.joint_pos_limits[:, self.drawer_bottom_idx, 1]
+        drawer_bottom_lower = self.drawer.data.joint_pos_limits[:, self.drawer_bottom_idx, 0]
         drawer_non_close_limit = drawer_bottom_upper - 0.1 * (drawer_bottom_upper - drawer_bottom_lower)
         self.move_door_success[torch.where(self.drawer.data.joint_pos[:, self.drawer_bottom_idx] < drawer_non_close_limit)] = 1
         self.lift_success[torch.where(self.can.data.root_state_w[:, 2] > 1.08)] = 1
